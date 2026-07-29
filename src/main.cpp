@@ -8,33 +8,52 @@ int main()
 {
     Metrics metrics;
     OriginServer origin;
-    Router router;
 
-    // Wire the Router to the Origin!
-    origin.setRouter(&router);
-
-    EdgeServer edge1(origin, metrics, 3);
-    EdgeServer edge2(origin, metrics, 3);
-    EdgeServer edge3(origin, metrics, 3);
-
-    router.addEdge(&edge1);
-    router.addEdge(&edge2);
-    router.addEdge(&edge3);
+    // Create Edge Servers with simulated locations and latencies
+    EdgeServer mumbaiEdge(origin, metrics, 100, "Mumbai", 5);
+    EdgeServer delhiEdge(origin, metrics, 100, "Delhi", 20);
+    EdgeServer nyEdge(origin, metrics, 100, "New York", 200);
 
     origin.upload("logo.png", "image data");
-    origin.upload("style.css", "body { color: red; }");
 
-    cout << "--- Filling Edge1 Cache ---\n";
-    edge1.request("logo.png"); 
-    edge1.request("logo.png"); 
+    // TEST 1: Round Robin
 
-    cout << "\n--- UPDATING FILE ON ORIGIN ---\n";
-    // uploading a NEW value for logo.png. This should trigger the invalidation!
-    origin.upload("logo.png", "NEW image data v2");
+    cout << "==== TEST 1: ROUND ROBIN ====\n";
+    Router rrRouter(RoutingStrategy::ROUND_ROBIN);
+    rrRouter.addEdge(&mumbaiEdge);
+    rrRouter.addEdge(&delhiEdge);
+    rrRouter.addEdge(&nyEdge);
+    origin.setRouter(&rrRouter);
 
-    cout << "\n--- Requesting updated file ---\n";
-    // Even though Edge1 just had a hit, it should be invalidated now, so it's a miss!
-    edge1.request("logo.png"); 
+    for (int i = 0; i < 6; i++) {
+        rrRouter.request("logo.png");
+    }
+
+    cout << "\n";
+
+
+
+
+    // Consistent Hashing
+    cout << "==== TEST 2: CONSISTENT HASHING ====\n";
+    
+    // Clear the caches from the previous test to start fresh
+    mumbaiEdge.invalidate("logo.png");
+    delhiEdge.invalidate("logo.png");
+    nyEdge.invalidate("logo.png");
+
+    Router chRouter(RoutingStrategy::CONSISTENT_HASHING);
+    chRouter.addEdge(&mumbaiEdge);
+    chRouter.addEdge(&delhiEdge);
+    chRouter.addEdge(&nyEdge);
+    origin.setRouter(&chRouter);
+
+    for (int i = 0; i < 6; i++) {
+        chRouter.request("logo.png");
+    }
+
+    cout << "\n==== Final Metrics ====\n";
+    metrics.display();
 
     return 0;
 }

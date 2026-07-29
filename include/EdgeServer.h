@@ -12,13 +12,20 @@ private:
     Cache cache;
     OriginServer &origin;
     Metrics &metrics;
+    string location;       // "Mumbai", "New York"
+    int latencyMs;         // Simulated network latency in milliseconds
 
 public:
-    EdgeServer(OriginServer &origin, Metrics &metrics, size_t cacheCapacity = 3);
+    EdgeServer(OriginServer &origin, Metrics &metrics, size_t cacheCapacity, string loc, int lat);
 
     string request(const string &key);
+    
+    void invalidate(const string &key);
 
     void displayCache() const;
-
-    void invalidate(const string &key); 
+    
+    // Getters for the Router to use
+    size_t getCacheSize() const { return cache.size(); }
+    string getLocation() const { return location; }
+    int getLatencyMs() const { return latencyMs; }
 };

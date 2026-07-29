@@ -1,28 +1,30 @@
 #include "../include/EdgeServer.h"
 #include "../include/Metrics.h"
-#include "EdgeServer.h"
+#include <thread>
+#include <chrono>
 
-EdgeServer::EdgeServer(OriginServer &origin, Metrics &metrics, size_t cacheCapacity)
+EdgeServer::EdgeServer(OriginServer &origin, Metrics &metrics, size_t cacheCapacity, string loc, int lat)
     : cache(cacheCapacity),
       origin(origin),
-      metrics(metrics)
+      metrics(metrics),
+      location(loc),
+      latencyMs(lat)
 {
 }
 
-void EdgeServer::displayCache() const
-{
-    cache.display();
-}
 
 string EdgeServer::request(const string &key)
 {
+    // Simulate network latency to this specific edge server
+    this_thread::sleep_for(chrono::milliseconds(latencyMs));
+
     if (cache.contains(key))
     {
         try
         {
             string value = cache.get(key);
             metrics.hit();
-            cout << "[EDGE] Cache HIT : " << key << '\n';
+            cout << "[EDGE " << location << " (" << latencyMs << "ms)] Cache HIT : " << key << '\n';
             return value;
         }
         catch (const runtime_error &)
@@ -32,16 +34,28 @@ string EdgeServer::request(const string &key)
     }
 
     metrics.miss();
-    cout << "[EDGE] Cache MISS : " << key << '\n';
+    cout << "[EDGE " << location << " (" << latencyMs << "ms)] Cache MISS : " << key << '\n';
 
-    string data = origin.fetch(key);
-
-    cache.put(key, data, 5); // Added TTL of 5 seconds for testing!
-
-    return data;
+    try
+    {
+        string data = origin.fetch(key);
+        cache.put(key, data, 5); // TTL of 5 seconds
+        return data;
+    }
+    catch (const runtime_error &e)
+    {
+        cout << "[EDGE " << location << "] ERROR: " << e.what() << '\n';
+        return "404 Not Found";
+    }
 }
+
+void EdgeServer::displayCache() const
+{
+    cache.display();
+}
+
 void EdgeServer::invalidate(const string &key)
 {
     cache.remove(key);
-    cout << "[EDGE] Cache INVALIDATED : " << key << '\n';
+    cout << "[EDGE " << location << "] Cache INVALIDATED : " << key << '\n';
 }
