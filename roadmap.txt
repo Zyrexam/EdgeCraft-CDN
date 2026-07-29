@@ -1,0 +1,136 @@
+=========================================================
+  EdgeCraft-CDN : A High-Performance CDN Simulator in C++
+=========================================================
+
+Architecture Overview
+---------------------
+
+    [Client]
+       │
+       ▼
+    [Router / Load Balancer]
+       │
+       ├──► [Edge Server 1] ──► [LRU + TTL Cache]
+       ├──► [Edge Server 2] ──► [LRU + TTL Cache]
+       └──► [Edge Server 3] ──► [LRU + TTL Cache]
+                  │                  (Hit? Return)
+                  │                  (Miss? Fetch)
+                  ▼
+            [Origin Server]
+                  │
+                  ▼
+            [PostgreSQL / Storage]
+
+=========================================================
+  Development Phases
+=========================================================
+
+Phase 1: Core Foundation
+✔ Cache (Unordered Map)
+✔ Origin Server (Key-Value Storage)
+✔ Edge Server (Cache-Aside Proxy)
+
+Phase 2: Network Routing
+✔ Multiple Edge Servers
+✔ Router (Round-Robin Load Balancing)
+
+Phase 3: Smart Caching
+✔ LRU Cache (Doubly Linked List + Hash Map for O(1) ops)
+✔ TTL Expiration (Chrono steady_clock)
+
+Phase 4: Consistency & Observability
+✔ Cache Invalidation (Push-based via Router)
+✔ Metrics (Hits, Misses, Hit Ratio)
+
+Phase 5: Advanced Load Balancing
+⬜ Least Connections Routing
+⬜ Geographical Routing (Latency Simulation)
+⬜ Consistent Hashing (Maximize Cache Efficiency)
+
+Phase 6: Production-Grade Features
+⬜ HTTP Server (cpp-httplib)
+⬜ PostgreSQL Origin (libpq)
+⬜ Multi-threading (std::thread, std::mutex for concurrent requests)
+⬜ Distributed Simulation (Zipfian Workload Generator)
+
+=========================================================
+  Core Concepts & Learnings
+=========================================================
+
+# How a real CDN works (e.g., Cloudflare)
+
+Suppose Cloudflare has edge servers in:
+Mumbai, Delhi, Singapore, London, Tokyo, New York
+
+A user from Bangalore requests:
+https://cdn.example.com/logo.png
+
+Does the browser know which edge server to use? NO.
+
+               Client
+                  │
+                  ▼
+         Router / DNS / Anycast
+                  │
+        ┌─────────┼─────────┐
+        ▼         ▼         ▼
+    Mumbai     Delhi    Singapore
+
+The Router chooses.
+
+---------------------------------------------------------
+
+# Why store pointers in the Router?
+
+Suppose we do this:
+  vector<EdgeServer> edges;
+
+The router would own COPIES of all edge servers.
+Instead we want the Router to just observe/reference them.
+
+Router
+   ├──► Edge1 (shared reference)
+   ├──► Edge2 (shared reference)
+   └──► Edge3 (shared reference)
+
+---------------------------------------------------------
+
+# Router Evolution
+
+Version 1: Always choose Edge 1 (Basic connectivity test)
+     ↓
+Version 2: Round Robin (Current - Simple load distribution)
+     ↓
+Version 3: Least Loaded Edge (Route to smallest cache size)
+     ↓
+Version 4: Nearest Geographic Edge (Simulate latency)
+     ↓
+Version 5: Consistent Hashing (Ensure same URL hits same Edge)
+
+---------------------------------------------------------
+
+# Solving the Circular Dependency Problem
+
+When implementing Cache Invalidation:
+Origin needs to tell Router to purge caches.
+Router includes EdgeServer.
+EdgeServer includes OriginServer.
+OriginServer including Router creates an infinite include loop!
+
+Solution: Forward Declaration
+In OriginServer.h:
+  class Router; // Tell compiler Router exists
+  ...
+  Router* router;
+
+In OriginServer.cpp:
+  #include "Router.h" // Full implementation here
+
+=========================================================
+  Benchmarks & Achievements
+=========================================================
+
+[ ] Phase 7 Goal: Zipfian Workload Simulation
+    - Simulate 100,000 requests.
+    - Achieve ~91%+ cache hit rate using LRU caching.
+    - Measure origin fetch reduction and latency improvements.
