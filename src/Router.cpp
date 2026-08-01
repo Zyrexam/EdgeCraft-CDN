@@ -4,9 +4,50 @@
 
 Router::Router(RoutingStrategy strat) : strategy(strat) {}
 
+void Router::addVNodes(EdgeServer *edge)
+{
+    hash<string> hashfn;
+
+    for (int i = 0; i < numVNodes; i++)
+    {
+        string vNodeName = edge->getLocation() + "_VNode" + to_string(i);
+        size_t hashValue = hashfn(vNodeName);
+        ring[hashValue] = edge;
+    }
+}
+
+void Router::removeVNodes(EdgeServer *edge)
+{
+    hash<string> hashFn;
+    for (int i = 0; i < numVNodes; i++)
+    {
+        string vNodeName = edge->getLocation() + "_VNode_" + to_string(i);
+        size_t hashValue = hashFn(vNodeName);
+        ring.erase(hashValue);
+    }
+}
+
 void Router::addEdge(EdgeServer *edge)
 {
     edges.push_back(edge);
+
+    if (strategy == RoutingStrategy::CONSISTENT_HASHING)
+    {
+        addVNodes(edge);
+    }
+}
+
+void Router::removeEdge(EdgeServer *edge)
+{
+
+    auto it = find(edges.begin(), edges.end(), edge);
+    if (it != edges.end())
+        edges.erase(it);
+
+    if (strategy == RoutingStrategy::CONSISTENT_HASHING)
+    {
+        removeVNodes(edge);
+    }
 }
 
 EdgeServer *Router::getNextEdge(const string &key)
@@ -38,14 +79,21 @@ EdgeServer *Router::getNextEdge(const string &key)
 
     else if (strategy == RoutingStrategy::CONSISTENT_HASHING)
     {
-        // Hash the key and modulo by the number of edges
+
         hash<string> hashFn;
         size_t hashValue = hashFn(key);
-        size_t index = hashValue % edges.size();
-        return edges[index];
+
+        auto it = ring.upper_bound(hashValue);
+
+        if (it == ring.end())
+        {
+            it = ring.begin();
+        }
+
+        return it->second;
     }
 
-    return nullptr; // Fallback
+    return nullptr;
 }
 
 string Router::request(const string &key)

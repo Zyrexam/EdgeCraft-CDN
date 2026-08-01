@@ -1,0 +1,9 @@
+EdgeCraft-CDN (main) > g++ -I include src/*.cpp && ./a.exe
+Simulating 100000 requests across 1000 files...
+      ZIPF'S SIMULATION METRICS
+Total Requests : 100000
+Cache Hits     : 97826
+Cache Misses   : 2174
+Hit Rate       : 97.826%
+Throughput     : 9443.76 req/sec
+EdgeCraft-CDN (main) >

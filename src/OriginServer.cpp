@@ -3,30 +3,30 @@
 
 OriginServer::OriginServer() : router(nullptr) {}
 
-
-void OriginServer::setRouter(Router* r)
+void OriginServer::setRouter(Router *r)
 {
     router = r;
 }
 
-void OriginServer::upload(const string& key, const string& value)
+void OriginServer::upload(const string &key, const string &value)
 {
-    
+
     bool isUpdate = storage.find(key) != storage.end();
-    
+
     storage[key] = value;
 
-    if(isUpdate && router != nullptr){
+    if (isUpdate && router != nullptr)
+    {
         router->invalidateCache(key);
     }
 }
 
-bool OriginServer::exists(const string& key) const
+bool OriginServer::exists(const string &key) const
 {
     return storage.find(key) != storage.end();
 }
 
-string OriginServer::fetch(const string& key) const
+string OriginServer::fetch(const string &key) const
 {
     auto it = storage.find(key);
 
@@ -36,14 +36,14 @@ string OriginServer::fetch(const string& key) const
     return it->second;
 }
 
-void OriginServer::remove(const string& key)
+void OriginServer::remove(const string &key)
 {
     storage.erase(key);
 }
 
 void OriginServer::display() const
 {
-    for (const auto& [key, value] : storage)
+    for (const auto &[key, value] : storage)
     {
         cout << key << " -> " << value << '\n';
     }

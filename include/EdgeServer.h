@@ -14,9 +14,10 @@ private:
     Metrics &metrics;
     string location;       // "Mumbai", "New York"
     int latencyMs;         // Simulated network latency in milliseconds
+    bool silentMode;
 
 public:
-    EdgeServer(OriginServer &origin, Metrics &metrics, size_t cacheCapacity, string loc, int lat);
+    EdgeServer(OriginServer &origin, Metrics &metrics, size_t cacheCapacity, string loc, int lat, bool silentMode);
 
     string request(const string &key);
     
